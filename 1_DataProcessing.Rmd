@@ -1,0 +1,73 @@
+---
+title: "1_DataProcessing"
+author: "Sofie McComb"
+date: "10/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This R markdown document will prepare the datasets needed to run the spatial connectivity analyses for examining how agricultural abandonment and fallowed fields can influence species connectivity in Kern County, focusing on the San Joaquin Kit Fox as a case study subject. The scripts will create the Kit Fox core area shapefiles and resistance layers needed to run Circuitscape and LinkageMapper analyses. 
+
+#Read in packages
+```{r packages}
+
+library(tidyverse) #data wrangling
+library(sf) #shapefiles
+library(raster) #rasters
+library(fasterize) #fast rasterize
+library(rgeos)
+library(cleangeo)
+options(scipen = 999) #no scientific notation
+
+```
+
+##Kern County
+Create Kern County Shapefile from TIGER 2019 Counties for all analyses
+```{r}
+
+#Kern county shapefile
+  #TIGER 2019 Counties projected to Albers, subset to Kern
+  tigercounties<-read_sf("Data/1_DataProcessing/TIGER2019Counties/tl_2019_us_county/tl_2019_us_county.shp") %>% 
+    st_transform("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 ")  #NLCD projection
+  Kern<-tigercounties %>% dplyr::filter(NAME=="Kern")
+  #Write shapefile
+  dir.create("Data/1_DataProcessing/KernCounty")
+  write_sf(Kern, "Data/1_DataProcessing/KernCounty/Kern.shp", delete_layer = TRUE)
+  
+
+```
+
+##Resistance
+Create Resistance Layers for the KitFox from land use and barrier data (create combind land use layers first)
+
+```{r}
+#Run Landuse R script
+  #Takes a long time to process, and currently writeRasters coded out so not written over unless need to rewrite
+# source("R/1_DataProcessing/Landuse.R")
+
+#Run Resistance R script
+  #Takes a long time to process, and currently writeRasters coded out so not written over unless need to rewrite
+# source("R/1_DataProcessing/Resistance.R")
+
+
+```
+
+
+##Core Areas
+
+```{r}
+
+#Run Core Areas R script
+  #Takes a long time to process, and currently write spatial files coded out so not written over unless need to rewrite
+# source("R/1_DataProcessing/CoreAreas.R")
+
+```
+
+
+
+Resistance layers and Core Areas now created for running Circuitscape and Linkage Mapper Analyses.
+For running connectivity analyses go to 2_Analysis.Rmd.
+
