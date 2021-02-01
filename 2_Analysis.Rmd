@@ -42,6 +42,7 @@ library(purrr)
 library(WRS2)
 library(broom)
 library(purrr)
+options(scipen = 999)
 
 ```
 
@@ -70,6 +71,14 @@ LCP_2016 <- sf::st_read(paste0(files, "KF_2016/output/link_maps.gdb"), layer = "
 LCP_2017 <- sf::st_read(paste0(files, "KF_2017/output/link_maps.gdb"), layer = "KF_2017_LCPs") %>% 
   st_set_geometry(NULL)
 
+#Create dataframes for three years to send to Ashley
+LCP_2011_csv<-LCP_2011%>% dplyr::mutate(Year=2011) %>% select(Year, everything())
+LCP_2015_csv<-LCP_2015%>% dplyr::mutate(Year=2015)%>% select(Year, everything())
+LCP_2017_csv<-LCP_2017%>% dplyr::mutate(Year=2017)%>% select(Year, everything())
+write_csv(LCP_2011_csv, "Data/2_Analysis/LCP_CSV/LCP_2011_csv.csv")
+write_csv(LCP_2015_csv, "Data/2_Analysis/LCP_CSV/LCP_2015_csv.csv")
+write_csv(LCP_2017_csv, "Data/2_Analysis/LCP_CSV/LCP_2017_csv.csv")
+
 #Dataframe for stats
 LCP_2011_df<-LCP_2011 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2011)
 LCP_2012_df<-LCP_2012 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2012)
@@ -87,17 +96,31 @@ count_link_year<-LCP_df_year %>% dplyr::select(Year, LCP_Length) %>% group_by(Ye
 count_link_year_core<-LCP_df_year %>% group_by(From_Core, Year) %>% summarize(count=n())
 
 #Create Dataframe for Paired Testing
-LCP_2011_df<-LCP_2011 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2011=LCP_Length, EffResistance_2011=Effective_Resistance)
-LCP_2012_df<-LCP_2012 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2012=LCP_Length, EffResistance_2012=Effective_Resistance)
-LCP_2013_df<-LCP_2013 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2013=LCP_Length, EffResistance_2013=Effective_Resistance)
-LCP_2014_df<-LCP_2014 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2014=LCP_Length, EffResistance_2014=Effective_Resistance)
-LCP_2015_df<-LCP_2015 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2015=LCP_Length, EffResistance_2015=Effective_Resistance)
-LCP_2016_df<-LCP_2016 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2016=LCP_Length, EffResistance_2016=Effective_Resistance)
-LCP_2017_df<-LCP_2017 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2017=LCP_Length, EffResistance_2017=Effective_Resistance)
+LCP_2011_df<-LCP_2011 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2011=LCP_Length, EffResistance_2011=Effective_Resistance, CWD_2011=CW_Dist)
+LCP_2012_df<-LCP_2012 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2012=LCP_Length, EffResistance_2012=Effective_Resistance, CWD_2012=CW_Dist)
+LCP_2013_df<-LCP_2013 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2013=LCP_Length, EffResistance_2013=Effective_Resistance, CWD_2013=CW_Dist)
+LCP_2014_df<-LCP_2014 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2014=LCP_Length, EffResistance_2014=Effective_Resistance, CWD_2014=CW_Dist)
+LCP_2015_df<-LCP_2015 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2015=LCP_Length, EffResistance_2015=Effective_Resistance, CWD_2015=CW_Dist)
+LCP_2016_df<-LCP_2016 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2016=LCP_Length, EffResistance_2016=Effective_Resistance, CWD_2016=CW_Dist)
+LCP_2017_df<-LCP_2017 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2017=LCP_Length, EffResistance_2017=Effective_Resistance, CWD_2017=CW_Dist)
 LCP_df<-list(LCP_2011_df, LCP_2012_df, LCP_2013_df, LCP_2014_df,
              LCP_2015_df,LCP_2016_df,LCP_2017_df) %>% 
   purrr::reduce(full_join, by=c("From_Core", "To_Core")) 
 
+#Examine differences
+LCP_diff<-LCP_df %>% 
+  dplyr::mutate(LengthDiff15_11=Length_2015-Length_2011,
+                LengthDiff17_11=Length_2017-Length_2011,
+                LengthDiff17_15=Length_2017-Length_2015,
+                ERDiff15_11=EffResistance_2015-EffResistance_2011,
+                ERDiff17_11=EffResistance_2017-EffResistance_2011,
+                ERDiff17_15=EffResistance_2017-EffResistance_2015,
+                CWD15_11=CWD_2015-CWD_2011,
+                CWD17_11=CWD_2017-CWD_2011,
+                CWD17_15=CWD_2017-CWD_2015)
+Diff<-LCP_diff %>% dplyr::select(From_Core, To_Core,LengthDiff15_11,LengthDiff17_11,LengthDiff17_15,
+                                 ERDiff15_11, ERDiff17_11,ERDiff17_15,
+                                 CWD15_11,CWD17_11,CWD17_15)
 
 #Summary stats on dataset
 #Count number of linkages (connections to core) for each from core 
