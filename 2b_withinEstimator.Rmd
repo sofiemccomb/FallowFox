@@ -76,46 +76,61 @@ coef_test(ERwithPLM, vcov = "CR2",cluster = df_full$From_To)
 ### estimatr: Here we get coefficients and SEs that match Ashley's, but I can't find a way to get the model intercept
 ```{r withEstimatrpackage}
 
-# ###### LCP Length ######
-# lcp_length_km_lmrob <- estimatr::lm_robust(formula = LCP_Length_km ~ Year,
-#           data = df_full,
-#           clusters = From_To,
-#           fixed_effects = ~From_To,
-#           se_type = 'stata')
-# 
-
-# summary(lcp_length_km_lmrob)
+###### LCP Length ######
+lcp_length_km_lmrob <- estimatr::lm_robust(formula = LCP_Length_km ~ Year,
+          data = df_full,
+          clusters = From_To,
+          fixed_effects = ~From_To,
+          se_type = 'stata')
 
 
-# df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
-# lcp_length_km_lmrob15 <- lm_robust(formula = LCP_Length_km ~ Year,
-#           data = df_full,
-#           clusters = From_To,
-#           fixed_effects = ~From_To,
-#           se_type = 'stata')
-# summary(lcp_length_km_lmrob15)
-# 
-# 
-# ####### CWD Distance #######
-# df_full <- within(df_full, Year <- relevel(Year, ref = '2011'))
-# CWD_lmrob <- lm_robust(formula = CW_Dist_km ~ Year,
-#           data = df_full,
-#           clusters = From_To,
-#           fixed_effects = ~From_To,
-#           se_type = 'stata')
-# summary(CWD_lmrob)
-# 
-# 
-# ####### CWD to Path Length Distance #######
-# df_full <- within(df_full, Year <- relevel(Year, ref = '2011'))
-# CWDtoLCP_lmrob15 <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
-#           data = df_full,
-#           clusters = From_To,
-#           fixed_effects = ~From_To,
-#           se_type = 'stata')
-# summary(CWDtoLCP_lmrob15)
-# 
-# 
+summary(lcp_length_km_lmrob)
+
+
+df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
+lcp_length_km_lmrob15 <- lm_robust(formula = LCP_Length_km ~ Year,
+          data = df_full,
+          clusters = From_To,
+          fixed_effects = ~From_To,
+          se_type = 'stata')
+summary(lcp_length_km_lmrob15)
+
+
+####### CWD Distance #######
+df_full <- within(df_full, Year <- relevel(Year, ref = '2011'))
+CWD_lmrob <- lm_robust(formula = CW_Dist_km ~ Year,
+          data = df_full,
+          clusters = From_To,
+          fixed_effects = ~From_To,
+          se_type = 'stata')
+summary(CWD_lmrob)
+
+df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
+CWD_lmrob15 <- lm_robust(formula = CW_Dist_km ~ Year,
+          data = df_full,
+          clusters = From_To,
+          fixed_effects = ~From_To,
+          se_type = 'stata')
+summary(CWD_lmrob15)
+
+####### CWD to Path Length Distance #######
+df_full <- within(df_full, Year <- relevel(Year, ref = '2011'))
+CWDtoLCP_lmrob <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
+          data = df_full,
+          clusters = From_To,
+          fixed_effects = ~From_To,
+          se_type = 'stata')
+summary(CWDtoLCP_lmrob)
+
+df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
+CWDtoLCP_lmrob15 <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
+          data = df_full,
+          clusters = From_To,
+          fixed_effects = ~From_To,
+          se_type = 'stata')
+summary(CWDtoLCP_lmrob15)
+
+
 ###### Effective Resistance ######
 df_full <- within(df_full, Year <- relevel(Year, ref = '2011'))
 ER_lmrob <- lm_robust(formula = Effective_Resistance ~ Year,
@@ -127,14 +142,14 @@ ER_lmrob <- lm_robust(formula = Effective_Resistance ~ Year,
 # Matching coefs and SEs, but no intercept
 summary(ER_lmrob)
 
-# 
-# df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
-# ER_lmrob15 <- lm_robust(formula = Effective_Resistance ~ Year,
-#           data = df_full,
-#           clusters = From_To,
-#           fixed_effects = ~From_To,
-#           se_type = 'stata')
-# summary(ER_lmrob15)
+
+df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
+ER_lmrob15 <- lm_robust(formula = Effective_Resistance ~ Year,
+          data = df_full,
+          clusters = From_To,
+          fixed_effects = ~From_To,
+          se_type = 'stata')
+summary(ER_lmrob15)
 
 
 ```
