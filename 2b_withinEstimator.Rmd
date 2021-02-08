@@ -12,119 +12,80 @@ knitr::opts_chunk$set(echo = TRUE)
 rm(list=ls())
 
 library(tidyverse)
-library(lme4)
-library(lmtest)
-library(lfe)
-library(plm)
-library(clubSandwich)
 library(estimatr)
+library(reshape2)
 
 df_2011 <- read_csv("./Data/2b_WithinEstimator/LCP_2011_csv.csv")
 df_2015 <- read_csv("./Data/2b_WithinEstimator/LCP_2015_csv.csv")
 df_2017 <- read_csv("./Data/2b_WithinEstimator/LCP_2017_csv.csv")
 
-df_full <- rbind(df_2011, df_2015, df_2017)
+df_reg <- rbind(df_2011, df_2015, df_2017)
 
 # Create to_from factor variable column
-df_full$From_To <- as.factor(paste0(df_full$From_Core,"_",df_full$To_Core))
-df_full$Year <- as.factor(df_full$Year)
+df_reg$From_To <- as.factor(paste0(df_reg$From_Core,"_",df_reg$To_Core))
+df_reg$Year <- as.factor(df_reg$Year)
 
 # Convert meters to KM
-df_full$CW_Dist_km <- df_full$CW_Dist/1000
-df_full$LCP_Length_km <- df_full$LCP_Length/1000
-df_full$Euc_Dist_km <- df_full$Euc_Dist/1000
+df_reg$CW_Dist_km <- df_reg$CW_Dist/1000
+df_reg$LCP_Length_km <- df_reg$LCP_Length/1000
+df_reg$Euc_Dist_km <- df_reg$Euc_Dist/1000
 
 ```
 
-### Within estimator regresssion
-```{r within_reg}
-
-ER_areg <- felm(Effective_Resistance ~ Year | From_To | 0 | From_To, 
-                data = df_full)
-
-# Matching coeffecients
-ER_areg$coefficients
-# Not matching SEs
-ER_areg$se
-# Still not matching
-clubSandwich::coef_test(ER_areg,vcov = "CR2",cluster = df_full$From_To)
-
-# 
-# CWD_areg <- felm(CW_Dist_km ~ Year | From_To | 0 | From_To, data = df_full)
-# coeftest(CWD_areg)
-# 
-# CWDtoLCP_areg <- felm(cwd_to_Path_Length_Ratio ~ Year | From_To | 0 | From_To, data = df_full)
-# coeftest(CWDtoLCP_areg)
-
-```
-
-
-### plm and clubSandwich: Here we get the same values for the coeffecients and constant/intercept, but different SEs
-```{r within_clubSand}
-
-ERwithPLM = plm(Effective_Resistance ~ Year, data = df_full, 
-                      index = c("From_To"),
-                      model=c("within"))
-summary(ERwithPLM)
-ERwithPLM_intercept = plm::within_intercept(ERwithPLM)
-
-# SEs don't match
-coef_test(ERwithPLM, vcov = "CR2",cluster = df_full$From_To)
-```
-
-
-### estimatr: Here we get coefficients and SEs that match Ashley's, but I can't find a way to get the model intercept
-```{r withEstimatrpackage}
+### Within estimator regression
+```{r withinReg}
 
 ###### LCP Length ######
+# Reference year: 2011
 lcp_length_km_lmrob <- estimatr::lm_robust(formula = LCP_Length_km ~ Year,
-          data = df_full,
+          data = df_reg,
           clusters = From_To,
           fixed_effects = ~From_To,
           se_type = 'stata')
-
-
 summary(lcp_length_km_lmrob)
 
-
-df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
+# Reference year: 2015
+df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
 lcp_length_km_lmrob15 <- lm_robust(formula = LCP_Length_km ~ Year,
-          data = df_full,
+          data = df_reg,
           clusters = From_To,
           fixed_effects = ~From_To,
           se_type = 'stata')
 summary(lcp_length_km_lmrob15)
 
-
 ####### CWD Distance #######
-df_full <- within(df_full, Year <- relevel(Year, ref = '2011'))
+# Reference year: 2011
+df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
 CWD_lmrob <- lm_robust(formula = CW_Dist_km ~ Year,
-          data = df_full,
+          data = df_reg,
           clusters = From_To,
           fixed_effects = ~From_To,
           se_type = 'stata')
 summary(CWD_lmrob)
 
-df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
+# Reference year: 2015
+df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
 CWD_lmrob15 <- lm_robust(formula = CW_Dist_km ~ Year,
-          data = df_full,
+          data = df_reg,
           clusters = From_To,
           fixed_effects = ~From_To,
           se_type = 'stata')
 summary(CWD_lmrob15)
 
 ####### CWD to Path Length Distance #######
-df_full <- within(df_full, Year <- relevel(Year, ref = '2011'))
+# Reference year: 2011
+df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
 CWDtoLCP_lmrob <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
-          data = df_full,
+          data = df_reg,
           clusters = From_To,
           fixed_effects = ~From_To,
           se_type = 'stata')
 summary(CWDtoLCP_lmrob)
 
-df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
+# Reference year: 2015
+df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
 CWDtoLCP_lmrob15 <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
-          data = df_full,
+          data = df_reg,
           clusters = From_To,
           fixed_effects = ~From_To,
           se_type = 'stata')
@@ -132,9 +93,10 @@ summary(CWDtoLCP_lmrob15)
 
 
 ###### Effective Resistance ######
-df_full <- within(df_full, Year <- relevel(Year, ref = '2011'))
+# Reference year: 2011
+df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
 ER_lmrob <- lm_robust(formula = Effective_Resistance ~ Year,
-          data = df_full,
+          data = df_reg,
           clusters = From_To,
           fixed_effects = ~From_To,
           se_type = 'stata')
@@ -142,78 +104,96 @@ ER_lmrob <- lm_robust(formula = Effective_Resistance ~ Year,
 # Matching coefs and SEs, but no intercept
 summary(ER_lmrob)
 
-
-df_full <- within(df_full, Year <- relevel(Year, ref = '2015'))
+# Reference year: 2015
+df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
 ER_lmrob15 <- lm_robust(formula = Effective_Resistance ~ Year,
-          data = df_full,
+          data = df_reg,
           clusters = From_To,
           fixed_effects = ~From_To,
           se_type = 'stata')
 summary(ER_lmrob15)
 
-
 ```
 
-######## All good below here ########
 
 ## New DFs for paired t-tests (Ashley reshapes data and keeps in one table instead)
 ```{r new_dfs}
-# 
-# df_2011 <- read_csv("./Data/2b_WithinEstimator/LCP_2011_csv.csv") %>% 
-#   select(Year,
-#          To_Core,
-#          From_Core,
-#          ER_2011=Effective_Resistance,
-#          CWD_2011=CW_Dist, 
-#          CWDtoLCP_2011=cwd_to_Path_Length_Ratio) %>% 
-#   mutate(From_To = as.factor(paste0(From_Core,"_",To_Core)),
-#          CWD_km_2011 = CWD_2011/1000)
-# 
-# df_2015 <- read_csv("./Data/2b_WithinEstimator/LCP_2015_csv.csv") %>% 
-#     select(Year,
-#          To_Core,
-#          From_Core,
-#          ER_2015=Effective_Resistance,
-#          CWD_2015=CW_Dist, 
-#          CWDtoLCP_2015=cwd_to_Path_Length_Ratio) %>% 
-#   mutate(From_To = as.factor(paste0(From_Core,"_",To_Core)),
-#          CWD_km_2015 = CWD_2015/1000)
-# 
-# df_2017 <- read_csv("./Data/2b_WithinEstimator/LCP_2017_csv.csv") %>% 
-#     select(Year,
-#          To_Core,
-#          From_Core,
-#          ER_2017=Effective_Resistance,
-#          CWD_2017=CW_Dist, 
-#          CWDtoLCP_2017=cwd_to_Path_Length_Ratio) %>% 
-#   mutate(From_To = as.factor(paste0(From_Core,"_",To_Core)),
-#          CWD_km_2017 = CWD_2017/1000)
-# 
-# df_full <- merge(df_2011,df_2015,by='From_To') %>% 
-#   merge(.,df_2017,by="From_To") %>% 
-#   select(1,5:8,12:15,19:22)
+
+df_2011 <- read_csv("./Data/2b_WithinEstimator/LCP_2011_csv.csv") %>%
+  select(Year,
+         To_Core,
+         From_Core,
+         ER_2011=Effective_Resistance,
+         CWD_2011=CW_Dist,
+         CWDtoLCP_2011=cwd_to_Path_Length_Ratio) %>%
+  mutate(From_To = as.factor(paste0(From_Core,"_",To_Core)),
+         CWD_km_2011 = CWD_2011/1000)
+
+df_2015 <- read_csv("./Data/2b_WithinEstimator/LCP_2015_csv.csv") %>%
+    select(Year,
+         To_Core,
+         From_Core,
+         ER_2015=Effective_Resistance,
+         CWD_2015=CW_Dist,
+         CWDtoLCP_2015=cwd_to_Path_Length_Ratio) %>%
+  mutate(From_To = as.factor(paste0(From_Core,"_",To_Core)),
+         CWD_km_2015 = CWD_2015/1000)
+
+df_2017 <- read_csv("./Data/2b_WithinEstimator/LCP_2017_csv.csv") %>%
+    select(Year,
+         To_Core,
+         From_Core,
+         ER_2017=Effective_Resistance,
+         CWD_2017=CW_Dist,
+         CWDtoLCP_2017=cwd_to_Path_Length_Ratio) %>%
+  mutate(From_To = as.factor(paste0(From_Core,"_",To_Core)),
+         CWD_km_2017 = CWD_2017/1000)
+
+df_ttests <- merge(df_2011,df_2015,by='From_To') %>%
+  merge(.,df_2017,by="From_To") %>%
+  select(1,5:8,12:15,19:22)
 
 ```
 
 # Paired T.Tests
 ```{r paired_t_tests}
-# 
-# # attach(df_full)
-# # names(df_full)
-# # Effective Resistance vs 2011
-# t.test(ER_2011,ER_2015,paired = TRUE)
-# t.test(ER_2011,ER_2017,paired = TRUE)
-# t.test(ER_2015,ER_2017,paired = TRUE)
-# 
-# # CWD
-# t.test(CWD_km_2011,CWD_km_2015,paired = TRUE)
-# t.test(CWD_km_2011,CWD_km_2017,paired = TRUE)
-# t.test(CWD_km_2015,CWD_km_2017,paired = TRUE)
-# 
-# # LCP to CWD
-# t.test(CWDtoLCP_2011,CWDtoLCP_2015,paired = TRUE)
-# t.test(CWDtoLCP_2011,CWDtoLCP_2017,paired = TRUE)
-# t.test(CWDtoLCP_2015,CWDtoLCP_2017,paired = TRUE)
+
+attach(df_ttests)
+# names(df_ttests)
+# Effective Resistance vs 2011
+t.test(ER_2011,ER_2015,paired = TRUE)
+t.test(ER_2011,ER_2017,paired = TRUE)
+t.test(ER_2015,ER_2017,paired = TRUE)
+
+# CWD
+t.test(CWD_km_2011,CWD_km_2015,paired = TRUE)
+t.test(CWD_km_2011,CWD_km_2017,paired = TRUE)
+t.test(CWD_km_2015,CWD_km_2017,paired = TRUE)
+
+# LCP to CWD
+t.test(CWDtoLCP_2011,CWDtoLCP_2015,paired = TRUE)
+t.test(CWDtoLCP_2011,CWDtoLCP_2017,paired = TRUE)
+t.test(CWDtoLCP_2015,CWDtoLCP_2017,paired = TRUE)
+detach(df_ttests)
+```
+
+# Example results comparison: Within estimator regression versus T.tests on same sample with LCP to CWD ratio as outcome variable
+```{r Ttest_reg_comparison}
+
+# Subset regression dataset to only include paths that are also in the df_ttests set of From_To paths
+df_reg_2 <- filter(df_reg,From_To %in% df_ttests$From_To)
+
+# T.test
+CWDtoLCP_lmrob <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
+          data = df_reg_2,
+          clusters = From_To,
+          fixed_effects = ~From_To,
+          se_type = 'stata')
+summary(CWDtoLCP_lmrob)
+
+t.test(df_ttests$CWDtoLCP_2011,df_ttests$CWDtoLCP_2015,paired = TRUE)
+t.test(df_ttests$CWDtoLCP_2011,df_ttests$CWDtoLCP_2017,paired = TRUE)
+t.test(df_ttests$CWDtoLCP_2015,df_ttests$CWDtoLCP_2017,paired = TRUE)
 ```
 
 
