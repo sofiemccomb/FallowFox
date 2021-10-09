@@ -184,6 +184,7 @@ detach(df_ttests)
 df_reg_2 <- filter(df_reg,From_To %in% df_ttests$From_To)
 
 # T.test
+df_reg_2 <- within(df_reg_2, Year <- relevel(Year, ref = '2015'))
 CWDtoLCP_lmrob <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
           data = df_reg_2,
           clusters = From_To,

@@ -1,0 +1,355 @@
+---
+title: "2_Analysis"
+author: "Sofie McComb"
+date: "10/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script will analyze the results of the Circuitscape and Linkage Mapper Runs. Visualizations of the results will be created in ArcGIS.
+The GIS file where the runs were completed is Data/2_Analysis/Circuitscape/KitFox_RunAnalyses.mxd folder. KitFoxCoreAreas.mxd was used in the creation of Western Kern core areas. KitFox_CompareOutputs.mxd is just a quick check of different analysis outputs. Paper_Maps has the visualizations of results with the mxd used to make the pngs and some of the calculations that were completed to create the maps.
+
+##Circuitscape
+The ArcGIS Circuitscape toolbox (Circuitscape_for_ArcGIS_2013_10_08_rev2) was used to run the analyses. For Circuitscape, an ASCII file of the Kit Fox core area shapefile data was created using the focal area to raster tool in the Circuitscape toolbox (works better than creating ASCII in R). These are saved in the Data/1_DataProcessing/CoreArea folder for each year (ASCII created using each separate year resistance ASCII layer). Circuitscape was run for each resistance layer with each matching core area ASCII file. Ran pairwise analysis for cumulative current, and other settings standard.
+
+Toolbox and results from the run saved in folder above the R project, and run on local drive where possible, for better processing.
+
+
+##Linkage Mapper
+The ArcGIS Linkage Mapper toolbox (Linkage_Mapper_2_0_0) was used to run the linkage mapper analyses. For Linkage Mapper, the resistance rasters and the kit fox core area shapefiles were used. For settings, dropped corridors that intersect core areas and truncated corridors at 200 km.
+
+Toolbox and results from the run saved in folder above the R project, and run on local drive where possible, for better processing.
+
+
+##Pinchpoint Mapper
+For Pinchpoint Mapper, ran on linkage mapper output with same core areas shapefile and resistance ASC used. For settings, used CWD cutoff distance of 200 km, and calculated adjacent pair pinch points using Circuitscape.
+
+
+
+##Read Packages
+```{r}
+
+library(sf)
+library(raster)
+library(tidyverse)
+library(ggplot2)
+library(coin)
+library(pwr)
+library(purrr)
+library(WRS2)
+library(broom)
+library(purrr)
+options(scipen = 999)
+
+```
+
+##Paired t-tests
+Paired t-test between the same core area Least Cost Paths.
+
+```{r}
+
+#Read in Least Cost Paths from Circuitscape/Linkage Mapper Runs
+  #Originally run on local drive and moved into main project folder (not R project as very large)
+  #Will need to change destinations to wherever files are stored using files below
+files<-"Z:/FallowFox/ConnectivityTools/Results/"
+
+LCP_2011 <- sf::st_read(paste0(files, "KF_2011/output/link_maps.gdb"), layer = "KF_2011_LCPs") %>% 
+  st_set_geometry(NULL)
+LCP_2012 <- sf::st_read(paste0(files, "KF_2012/output/link_maps.gdb"), layer = "KF_2012_LCPs") %>% 
+  st_set_geometry(NULL)
+LCP_2013 <- sf::st_read(paste0(files, "KF_2013/output/link_maps.gdb"), layer = "KF_2013_LCPs") %>% 
+  st_set_geometry(NULL)
+LCP_2014 <- sf::st_read(paste0(files, "KF_2014/output/link_maps.gdb"), layer = "KF_2014_LCPs") %>% 
+  st_set_geometry(NULL)
+LCP_2015 <- sf::st_read(paste0(files, "KF_2015/output/link_maps.gdb"), layer = "KF_2015_LCPs") %>% 
+  st_set_geometry(NULL)
+LCP_2016 <- sf::st_read(paste0(files, "KF_2016/output/link_maps.gdb"), layer = "KF_2016_LCPs") %>% 
+  st_set_geometry(NULL)
+LCP_2017 <- sf::st_read(paste0(files, "KF_2017/output/link_maps.gdb"), layer = "KF_2017_LCPs") %>% 
+  st_set_geometry(NULL)
+
+#Create dataframes for three years to send to Ashley
+LCP_2011_csv<-LCP_2011%>% dplyr::mutate(Year=2011) %>% select(Year, everything())
+LCP_2015_csv<-LCP_2015%>% dplyr::mutate(Year=2015)%>% select(Year, everything())
+LCP_2017_csv<-LCP_2017%>% dplyr::mutate(Year=2017)%>% select(Year, everything())
+# write_csv(LCP_2011_csv, "Data/2_Analysis/LCP_CSV/LCP_2011_csv.csv")
+# write_csv(LCP_2015_csv, "Data/2_Analysis/LCP_CSV/LCP_2015_csv.csv")
+# write_csv(LCP_2017_csv, "Data/2_Analysis/LCP_CSV/LCP_2017_csv.csv")
+
+#Dataframe for stats
+LCP_2011_df<-LCP_2011 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2011)
+LCP_2012_df<-LCP_2012 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2012)
+LCP_2013_df<-LCP_2013 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2013)
+LCP_2014_df<-LCP_2014 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2014)
+LCP_2015_df<-LCP_2015 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2015)
+LCP_2016_df<-LCP_2016 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2016)
+LCP_2017_df<-LCP_2017 %>% dplyr::select(From_Core, To_Core, LCP_Length) %>% dplyr::mutate(Year=2017)
+LCP_df_year<-list(LCP_2011_df, LCP_2012_df, LCP_2013_df, LCP_2014_df,
+                  LCP_2015_df,LCP_2016_df,LCP_2017_df) %>% 
+  purrr::reduce(full_join, by=c("From_Core", "To_Core", "Year", "LCP_Length")) 
+
+#Count number of linkages (connections to core) for each from core for each year and paths per year
+count_link_year<-LCP_df_year %>% dplyr::select(Year, LCP_Length) %>% group_by(Year) %>% summarize(count=n())
+count_link_year_core<-LCP_df_year %>% group_by(From_Core, Year) %>% summarize(count=n())
+
+#Create Dataframe for Paired Testing
+LCP_2011_df<-LCP_2011 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2011=LCP_Length, EffResistance_2011=Effective_Resistance, CWD_2011=CW_Dist)
+LCP_2012_df<-LCP_2012 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2012=LCP_Length, EffResistance_2012=Effective_Resistance, CWD_2012=CW_Dist)
+LCP_2013_df<-LCP_2013 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2013=LCP_Length, EffResistance_2013=Effective_Resistance, CWD_2013=CW_Dist)
+LCP_2014_df<-LCP_2014 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2014=LCP_Length, EffResistance_2014=Effective_Resistance, CWD_2014=CW_Dist)
+LCP_2015_df<-LCP_2015 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2015=LCP_Length, EffResistance_2015=Effective_Resistance, CWD_2015=CW_Dist)
+LCP_2016_df<-LCP_2016 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2016=LCP_Length, EffResistance_2016=Effective_Resistance, CWD_2016=CW_Dist)
+LCP_2017_df<-LCP_2017 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance, CW_Dist) %>% dplyr::rename(Length_2017=LCP_Length, EffResistance_2017=Effective_Resistance, CWD_2017=CW_Dist)
+LCP_df<-list(LCP_2011_df, LCP_2012_df, LCP_2013_df, LCP_2014_df,
+             LCP_2015_df,LCP_2016_df,LCP_2017_df) %>% 
+  purrr::reduce(full_join, by=c("From_Core", "To_Core")) 
+
+#Examine differences
+LCP_diff<-LCP_df %>% 
+  dplyr::mutate(LengthDiff15_11=Length_2015-Length_2011,
+                LengthDiff17_11=Length_2017-Length_2011,
+                LengthDiff17_15=Length_2017-Length_2015,
+                ERDiff15_11=EffResistance_2015-EffResistance_2011,
+                ERDiff17_11=EffResistance_2017-EffResistance_2011,
+                ERDiff17_15=EffResistance_2017-EffResistance_2015,
+                CWD15_11=CWD_2015-CWD_2011,
+                CWD17_11=CWD_2017-CWD_2011,
+                CWD17_15=CWD_2017-CWD_2015)
+Diff<-LCP_diff %>% dplyr::select(From_Core, To_Core,LengthDiff15_11,LengthDiff17_11,LengthDiff17_15,
+                                 ERDiff15_11, ERDiff17_11,ERDiff17_15,
+                                 CWD15_11,CWD17_11,CWD17_15)
+
+#Summary stats on dataset
+#Count number of linkages (connections to core) for each from core 
+count_link<-LCP_df %>% dplyr::select(From_Core, To_Core) %>% group_by(From_Core) %>% summarize(count=n())
+avg_length_year<-LCP_df%>% dplyr::select(Length_2011, Length_2012, Length_2013, Length_2014, 
+                                         Length_2015, Length_2016, Length_2017) %>% 
+  colMeans(., na.rm=TRUE) %>% as.data.frame()
+avg_length_year_na<-LCP_df%>% dplyr::select(Length_2011, Length_2012, Length_2013, Length_2014, 
+                                            Length_2015, Length_2016, Length_2017) %>% 
+  na.omit() %>% colMeans(., na.rm=TRUE)%>% as.data.frame()
+avg_er_year_na<-LCP_df%>% dplyr::select(EffResistance_2011, EffResistance_2012, EffResistance_2013, EffResistance_2014, 
+                                        EffResistance_2015, EffResistance_2016, EffResistance_2017) %>% 
+  na.omit() %>% colMeans(., na.rm=TRUE)%>% as.data.frame()
+
+
+#LCP Length  
+  #Two-sided Paired T-Tests: Welch (Unequal Variance) and Yuen (Normality) and One-Sided Paired T-Test: Welch
+  #2011 vs 2015
+  l15_twosided<-t.test(LCP_df$Length_2011,LCP_df$Length_2015,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  l15_robust<-WRS2::yuend(LCP_df$Length_2011,LCP_df$Length_2015, tr=0.2)
+  l15_onesided<-t.test(LCP_df$Length_2011,LCP_df$Length_2015,paired=TRUE,conf.level=0.95, alternative="less", var.equal=FALSE)
+  #2011 vs 2017
+  l17_twosided<-t.test(LCP_df$Length_2011,LCP_df$Length_2017,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  l17_robust<-WRS2::yuend(LCP_df$Length_2011,LCP_df$Length_2017, tr=0.2)
+  l17_onesided<-t.test(LCP_df$Length_2011,LCP_df$Length_2017,paired=TRUE,conf.level=0.95, alternative="less", var.equal=FALSE)
+  #2015 vs 2017
+  l57_twosided<-t.test(LCP_df$Length_2015,LCP_df$Length_2017,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  l57_robust<-WRS2::yuend(LCP_df$Length_2015,LCP_df$Length_2017, tr=0.2)
+  l57_onesided<-t.test(LCP_df$Length_2015,LCP_df$Length_2017,paired=TRUE,conf.level=0.95, alternative="greater", var.equal=FALSE)
+
+#Effective Resistance 
+  #Two-sided Paired T-Tests: Welch (Unequal Variance) and Yuen (Normality) and One-Sided Paired T-Test: Welch
+  #2011 vs 2015
+  er15_twosided<-t.test(LCP_df$EffResistance_2011,LCP_df$EffResistance_2015,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  er15_robust<-WRS2::yuend(LCP_df$EffResistance_2011,LCP_df$EffResistance_2015, tr=0.2)
+  er15_onesided<-t.test(LCP_df$EffResistance_2011,LCP_df$EffResistance_2015,paired=TRUE,conf.level=0.95, alternative="greater", var.equal=FALSE)
+  #2011 vs 2017
+  er17_twosided<-t.test(LCP_df$EffResistance_2011,LCP_df$EffResistance_2017,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  er17_robust<-WRS2::yuend(LCP_df$EffResistance_2011,LCP_df$EffResistance_2017, tr=0.2)
+  er17_onesided<-t.test(LCP_df$EffResistance_2011,LCP_df$EffResistance_2017,paired=TRUE,conf.level=0.95, alternative="greater", var.equal=FALSE)
+  #2015 vs 2017
+  er57_twosided<-t.test(LCP_df$EffResistance_2015,LCP_df$EffResistance_2017,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  er57_robust<-WRS2::yuend(LCP_df$EffResistance_2015,LCP_df$EffResistance_2017, tr=0.2)
+  er57_onesided<-t.test(LCP_df$EffResistance_2015,LCP_df$EffResistance_2017,paired=TRUE,conf.level=0.95, alternative="less", var.equal=FALSE)
+
+#Combine t-tests into dataframe (use broom/tidy for t.tests)
+welchtests <- map_df(list(l15_twosided, l15_onesided,
+                          l17_twosided, l17_onesided,
+                          l57_twosided, l57_onesided,
+                          er15_twosided, er15_onesided,
+                          er17_twosided, er17_onesided,
+                          er57_twosided, er57_onesided), tidy) %>% 
+  dplyr::mutate(Name=c("Length 2011v2015", "Length 2011v2015",
+                       "Length 2011v2017", "Length 2011v2017",
+                       "Length 2015v2017", "Length 2015v2017",
+                       "Eff. Resist. 2011v2015", "Eff. Resist. 2011v2015",
+                       "Eff. Resist. 2011v2017", "Eff. Resist. 2011v2017", 
+                       "Eff. Resist. 2015v2017","Eff. Resist. 2015v2017")) %>% 
+  dplyr::select(Name, everything())
+#Bonferroni corrected p-values
+p.adjust(welchtests$p.value, method="bonferroni")
+
+robust_df<-data.frame(Name=c("Length 2011v2015","Length 2011v2017", "Length 2015v2017",
+                             "Eff. Resist. 2011v2015","Eff. Resist. 2011v2017","Eff. Resist. 2015v2017"),
+                      estimate=c(l15_robust$diff, l17_robust$diff, l57_robust$diff,
+                                 er15_robust$diff, er17_robust$diff, er57_robust$diff),
+                      statistic=c(l15_robust$test, l17_robust$test, l57_robust$test,
+                                  er15_robust$test, er17_robust$test, er57_robust$test),
+                      p.value=c(l15_robust$p.value, l17_robust$p.value, l57_robust$p.value,
+                                er15_robust$p.value, er17_robust$p.value, er57_robust$p.value), 
+                      parameter=c(l15_robust$df, l17_robust$df, l57_robust$df,
+                                  er15_robust$df, er17_robust$df, er57_robust$df), 
+                      conf.low=c(l15_robust$conf.int[1], l17_robust$conf.int[1], l57_robust$conf.int[1],
+                                 er15_robust$conf.int[1], er17_robust$conf.int[1], er57_robust$conf.int[1]), 
+                      conf.high=c(l15_robust$conf.int[2], l17_robust$conf.int[2], l57_robust$conf.int[2],
+                                  er15_robust$conf.int[2], er17_robust$conf.int[2], er57_robust$conf.int[2]), 
+                      method=c("Yuen Paired t-test", "Yuen Paired t-test", "Yuen Paired t-test",
+                               "Yuen Paired t-test", "Yuen Paired t-test", "Yuen Paired t-test"), 
+                      alternative=c("two.sided", "two.sided", "two.sided",
+                                    "two.sided", "two.sided", "two.sided"))
+
+final_df<-rbind(welchtests, robust_df)
+#Bonferroni corrected p-values
+p.adjust(welchtests$p.value, method="bonferroni")
+
+
+#Western Kern
+  #In GIS, used the KitFox_Highest_5ha and subset by rectangle in GIS to only have Western Kern Core Areas (to further examine)
+    #Left of largest core area in center
+west_kern_core<-sf::read_sf("Data/1_DataProcessing/CWHR/KitFox/KitFox_Highest_5ha_WestKern.shp") %>% st_set_geometry(NULL)
+LCP_df_west<-inner_join(LCP_df, west_kern_core, by=c("From_Core"="CircuitID", "To_Core"="CircuitID"))
+
+#LCP Length  
+  #Two-sided Paired T-Tests: Welch (Unequal Variance) and Yuen (Normality) and One-Sided Paired T-Test: Welch
+  #2011 vs 2015
+  l15_twosided<-t.test(LCP_df_west$Length_2011,LCP_df_west$Length_2015,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  l15_robust<-WRS2::yuend(LCP_df_west$Length_2011,LCP_df_west$Length_2015, tr=0.2)
+  l15_onesided<-t.test(LCP_df_west$Length_2011,LCP_df_west$Length_2015,paired=TRUE,conf.level=0.95, alternative="less", var.equal=FALSE)
+  #2011 vs 2017
+  l17_twosided<-t.test(LCP_df_west$Length_2011,LCP_df_west$Length_2017,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  l17_robust<-WRS2::yuend(LCP_df_west$Length_2011,LCP_df_west$Length_2017, tr=0.2)
+  l17_onesided<-t.test(LCP_df_west$Length_2011,LCP_df_west$Length_2017,paired=TRUE,conf.level=0.95, alternative="less", var.equal=FALSE)
+  #2015 vs 2017
+  l57_twosided<-t.test(LCP_df_west$Length_2015,LCP_df_west$Length_2017,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  l57_robust<-WRS2::yuend(LCP_df_west$Length_2015,LCP_df_west$Length_2017, tr=0.2)
+  l57_onesided<-t.test(LCP_df_west$Length_2015,LCP_df_west$Length_2017,paired=TRUE,conf.level=0.95, alternative="greater", var.equal=FALSE)
+
+#Effective Resistance 
+  #Two-sided Paired T-Tests: Welch (Unequal Variance) and Yuen (Normality) and One-Sided Paired T-Test: Welch
+  #2011 vs 2015
+  er15_twosided<-t.test(LCP_df_west$EffResistance_2011,LCP_df_west$EffResistance_2015,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  er15_robust<-WRS2::yuend(LCP_df_west$EffResistance_2011,LCP_df_west$EffResistance_2015, tr=0.2)
+  er15_onesided<-t.test(LCP_df_west$EffResistance_2011,LCP_df_west$EffResistance_2015,paired=TRUE,conf.level=0.95, alternative="greater", var.equal=FALSE)
+  #2011 vs 2017
+  er17_twosided<-t.test(LCP_df_west$EffResistance_2011,LCP_df_west$EffResistance_2017,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  er17_robust<-WRS2::yuend(LCP_df_west$EffResistance_2011,LCP_df_west$EffResistance_2017, tr=0.2)
+  er17_onesided<-t.test(LCP_df_west$EffResistance_2011,LCP_df_west$EffResistance_2017,paired=TRUE,conf.level=0.95, alternative="greater", var.equal=FALSE)
+  #2015 vs 2017
+  er57_twosided<-t.test(LCP_df_west$EffResistance_2015,LCP_df_west$EffResistance_2017,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  er57_robust<-WRS2::yuend(LCP_df_west$EffResistance_2015,LCP_df_west$EffResistance_2017, tr=0.2)
+  er57_onesided<-t.test(LCP_df_west$EffResistance_2015,LCP_df_west$EffResistance_2017,paired=TRUE,conf.level=0.95, alternative="less", var.equal=FALSE)
+
+
+
+welchtests <- map_df(list(l15_twosided, l15_onesided,
+                          l17_twosided, l17_onesided,
+                          l57_twosided, l57_onesided,
+                          er15_twosided, er15_onesided,
+                          er17_twosided, er17_onesided,
+                          er57_twosided, er57_onesided), tidy) %>% 
+  dplyr::mutate(Name=c("Length 2011v2015", "Length 2011v2015",
+                       "Length 2011v2017", "Length 2011v2017",
+                       "Length 2015v2017", "Length 2015v2017",
+                       "Eff. Resist. 2011v2015", "Eff. Resist. 2011v2015",
+                       "Eff. Resist. 2011v2017", "Eff. Resist. 2011v2017", 
+                       "Eff. Resist. 2015v2017","Eff. Resist. 2015v2017")) %>% 
+  dplyr::select(Name, everything())
+
+
+robust_df<-data.frame(Name=c("Length 2011v2015","Length 2011v2017", "Length 2015v2017",
+                             "Eff. Resist. 2011v2015","Eff. Resist. 2011v2017","Eff. Resist. 2015v2017"),
+                      estimate=c(l15_robust$diff, l17_robust$diff, l57_robust$diff,
+                                 er15_robust$diff, er17_robust$diff, er57_robust$diff),
+                      statistic=c(l15_robust$test, l17_robust$test, l57_robust$test,
+                                  er15_robust$test, er17_robust$test, er57_robust$test),
+                      p.value=c(l15_robust$p.value, l17_robust$p.value, l57_robust$p.value,
+                                er15_robust$p.value, er17_robust$p.value, er57_robust$p.value), 
+                      parameter=c(l15_robust$df, l17_robust$df, l57_robust$df,
+                                  er15_robust$df, er17_robust$df, er57_robust$df), 
+                      conf.low=c(l15_robust$conf.int[1], l17_robust$conf.int[1], l57_robust$conf.int[1],
+                                 er15_robust$conf.int[1], er17_robust$conf.int[1], er57_robust$conf.int[1]), 
+                      conf.high=c(l15_robust$conf.int[2], l17_robust$conf.int[2], l57_robust$conf.int[2],
+                                  er15_robust$conf.int[2], er17_robust$conf.int[2], er57_robust$conf.int[2]), 
+                      method=c("Yuen Paired t-test", "Yuen Paired t-test", "Yuen Paired t-test",
+                               "Yuen Paired t-test", "Yuen Paired t-test", "Yuen Paired t-test"), 
+                      alternative=c("two.sided", "two.sided", "two.sided",
+                                    "two.sided", "two.sided", "two.sided"))
+
+final_df_westkern<-rbind(welchtests, robust_df)
+
+
+
+#Combine Results
+############################################
+final_df<-final_df %>% dplyr::mutate(Area="All Kern") %>% dplyr::select(Area, everything())
+final_df_westkern<-final_df_westkern %>% dplyr::mutate(Area="West Kern")%>% dplyr::select(Area, everything())
+df<-rbind(final_df, final_df_westkern) %>% arrange(Name)
+dir.create("Data/2_Analysis/Stats")
+write_csv(df, "Data/2_Analysis/Stats/LeastCostPathStats.csv")
+
+#Bonferroni corrected p-values
+df<-read_csv("Data/2_Analysis/Stats/LeastCostPathStats.csv")
+LCP_AllKern_pairedttest<-df %>% dplyr::filter(Area=="All Kern" & method=="Paired t-test"& alternative=="two.sided") %>% 
+  dplyr::filter(Name=="Length 2011v2015"|Name=="Length 2011v2017"|Name=="Length 2015v2017")%>% 
+  dplyr::mutate(BonfPVal=p.adjust(p.value, method="bonferroni"))
+LCP_WestKern_pairedttest<-df %>% dplyr::filter(Area=="West Kern" & method=="Paired t-test"& alternative=="two.sided") %>% 
+  dplyr::filter(Name=="Length 2011v2015"|Name=="Length 2011v2017"|Name=="Length 2015v2017")%>% 
+  dplyr::mutate(BonfPVal=p.adjust(p.value, method="bonferroni"))
+
+ER_AllKern_pairedttest<-df %>% dplyr::filter(Area=="All Kern" & method=="Paired t-test"& alternative=="two.sided") %>% 
+  dplyr::filter(Name=="Eff. Resist. 2011v2015"|Name=="Eff. Resist. 2011v2017"|Name=="Eff. Resist. 2015v2017")%>% 
+  dplyr::mutate(BonfPVal=p.adjust(p.value, method="bonferroni"))
+ER_WestKern_pairedttest<-df %>% dplyr::filter(Area=="West Kern" & method=="Paired t-test"& alternative=="two.sided") %>% 
+  dplyr::filter(Name=="Eff. Resist. 2011v2015"|Name=="Eff. Resist. 2011v2017"|Name=="Eff. Resist. 2015v2017")%>% 
+  dplyr::mutate(BonfPVal=p.adjust(p.value, method="bonferroni"))
+
+
+df_bonf<-rbind(LCP_AllKern_pairedttest, LCP_WestKern_pairedttest, ER_AllKern_pairedttest, ER_WestKern_pairedttest)
+write_csv(df_bonf, "Data/2_Analysis/Stats/LeastCostPathStats_bonf.csv")
+
+#####################################################################################
+#Compare 2011 Results (Based on different land use static assumptions)
+LCP_2011 <- sf::st_read(paste0(files, "KF_2011/output/link_maps.gdb"), layer = "KF_2011_LCPs") %>% 
+  st_set_geometry(NULL)
+LCP_2011_compare <- sf::st_read(paste0(files, "KF_2011compare/output/link_maps.gdb"), layer = "KF_2011compare_LCPs") %>% 
+  st_set_geometry(NULL)
+
+LCP_2011_df<-LCP_2011 %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2011=LCP_Length, EffResistance_2011=Effective_Resistance)
+LCP_2011compare_df<-LCP_2011_compare %>% dplyr::select(From_Core, To_Core, LCP_Length, Effective_Resistance) %>% dplyr::rename(Length_2011Compare=LCP_Length, EffResistance_2011Compare=Effective_Resistance)
+LCP_df<-list(LCP_2011_df, LCP_2011compare_df) %>% 
+  purrr::reduce(full_join, by=c("From_Core", "To_Core")) 
+
+#LCP Length  
+  #Two-sided Paired T-Tests: Welch (Unequal Variance) and Yuen (Normality) and One-Sided Paired T-Test: Welch
+  l11_twosided<-t.test(LCP_df$Length_2011,LCP_df$Length_2011Compare,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  l11_robust<-WRS2::yuend(LCP_df$Length_2011,LCP_df$Length_2011Compare, tr=0.2)
+
+#Effective Resistance 
+  #Two-sided Paired T-Tests: Welch (Unequal Variance) and Yuen (Normality) and One-Sided Paired T-Test: Welch
+  er11_twosided<-t.test(LCP_df$EffResistance_2011,LCP_df$EffResistance_2011Compare,paired=TRUE,conf.level=0.95, var.equal=FALSE)
+  er11_robust<-WRS2::yuend(LCP_df$EffResistance_2011,LCP_df$Length_2011Compare, tr=0.2)
+
+#Combine t-tests into dataframe (use broom/tidy for t.tests)
+welchtests <- map_df(list(l11_twosided,er11_twosided), tidy) %>% 
+  dplyr::mutate(Name=c("Length", "Eff. Resist.")) %>% 
+  dplyr::select(Name, everything())
+
+robust_df<-data.frame(Name=c("Length","Eff. Resist."),
+                      estimate=c(l11_robust$diff, er11_robust$diff),
+                      statistic=c(l11_robust$test, er11_robust$test),
+                      p.value=c(l11_robust$p.value, er11_robust$p.value), 
+                      parameter=c(l11_robust$df, er11_robust$df), 
+                      conf.low=c(l11_robust$conf.int[1], er11_robust$conf.int[1]), 
+                      conf.high=c(l11_robust$conf.int[2], er11_robust$conf.int[2]), 
+                      method=c("Yuen Paired t-test", "Yuen Paired t-test"), 
+                      alternative=c("two.sided", "two.sided"))
+
+final_df<-rbind(welchtests, robust_df) %>% arrange(Name)
+# write_csv(final_df, "Data/2_Analysis/Stats/LeastCostPathStats_2011compare.csv")
+
+```
+

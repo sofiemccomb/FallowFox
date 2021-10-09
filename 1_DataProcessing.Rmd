@@ -46,14 +46,34 @@ Create Resistance Layers for the KitFox from land use and barrier data (create c
 ```{r}
 #Run Landuse R script
   #Takes a long time to process, and currently writeRasters coded out so not written over unless need to rewrite
-# source("R/1_DataProcessing/Landuse.R")
+source("R/1_DataProcessing/Landuse.R")
 
-#Run Resistance R script
+#Run Resistance R scripts
   #Takes a long time to process, and currently writeRasters coded out so not written over unless need to rewrite
-# source("R/1_DataProcessing/Resistance.R")
 
+#Original Old Version
+  # source("R/1_DataProcessing/Resistance_Old.R")
+
+#New Baseline Resistances with Irrigation Canals & Multiple Dickson equations
+source("R/1_DataProcessing/Resistance/Baseline.R")
+
+#Negative Exponential Functions instead of current resistance equations
+source("R/1_DataProcessing/Resistance/NegativeExponential.R")
+
+#Naturalness 
+source("R/1_DataProcessing/Resistance/Naturalness.R")
 
 ```
+
+##Compare Resistance Layers: Robustness & Sensitivity Analyses
+
+```{r}
+
+source("R/1_DataProcessing/Resistance/ResistanceComparison.R")
+
+```
+
+
 
 
 ##Core Areas
@@ -65,6 +85,7 @@ Create Resistance Layers for the KitFox from land use and barrier data (create c
 # source("R/1_DataProcessing/CoreAreas.R")
 
 ```
+
 
 
 
