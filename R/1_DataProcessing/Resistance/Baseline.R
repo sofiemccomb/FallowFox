@@ -2,12 +2,16 @@
 
   #Dickson et al. 2017 approach: https://doi.org/10.1111/conl.12322 
   #Informing Strategic Efforts to Expand & Connect Protected Areas Using a Model of Ecological Flow, with Application to the Western United States
-  #Resistance surfaces based on human modification of the landscape & natural barriers
-  #SI equations 1, 3, 5
-    #R1=1+(H^(0.8-s)^2)x1000--Low permisitivity
-    #R3=1+(1000xH^2)+(s/4)--Moderate permisitivity
-    #R5=(H+1)^10+(s/4)--High permisitivity
-  #Using resistance values derived from habitat suitability linear inverse direct relationship
+  #Resistance surfaces based on human modification of the landscape & natural barriers impacting difficulty of Kit Fox movement
+  #SI equations 1, 3, 5 [defined in Dickson et al 2017 SI]
+    #R1=1+(H^(0.8-s)^2)x1000--Lowest sensitivity of movement to human modification
+    #R3=1+(1000xH^2)+(s/4)--Moderate sensitivity
+    #R5=(H+1)^10+(s/4)--High sensitivity
+  #Basing human modification scores on resistance values derived from habitat suitability linear inverse direct relationship for Kit Foxes
+    #How human modified the land is influences their developed habitat suitability values in Cypher et al. 2013
+  #Assumption that higher levels of human modification has higher resistance--human activities impacts species movement (Dickson et al. 2017, Lawler et al. 2013, Krosby et al. 2015)
+    #R values 1-1001 or 1-1024 depending on equation used
+    #All three equations account for energetic cost of moving through terrain with slope modification
 
 #Read in packages
 ###############################
@@ -59,7 +63,7 @@ lc_2017<-raster("Data/1_DataProcessing/Landuse/Landuse_2017.tif")
 #Fallow and Idle Separate
 kf_rclmat<-read_csv("Data/1_DataProcessing/Resistance/KitFox/ResistanceValues.csv") %>% 
   dplyr::select(Value_Low, Value_High, Value_Res) %>% 
-  as.matrix()
+  as.matrix() #No unclassified values
 #Reclassify land use
 rc_2011 <- reclassify(lc_2011, kf_rclmat)#Reclassify land use
 rc_2015 <- reclassify(lc_2015, kf_rclmat)#Reclassify land use
@@ -138,7 +142,7 @@ writeRaster(rc_all_2017,"Data/1_DataProcessing/Resistance/Revisions/Baseline/Lan
   #484--Wash, which is the usually dry portion of streambed, oly water during rainstorm
   
   #Rasterize rivers to raster
-  rivers_ras = fasterize(rivers_sf, ras, field="Value", background=0)
+  rivers_ras = fasterize(rivers_sf, ras, field="Value", background=NA)
   #Value of 1 for where rivers are, but also resistance values of 1
   
   # Crop and Mask to Kern County
@@ -157,7 +161,7 @@ writeRaster(rc_all_2017,"Data/1_DataProcessing/Resistance/Revisions/Baseline/Lan
     dplyr::select(Value)
 
   #Rasterize instead of fasterize since they are linestrings
-  irrigcanals_ras = rasterize(irrigcanals_sf, ras, field="Value", background=0)
+  irrigcanals_ras = rasterize(irrigcanals_sf, ras, field="Value", background=NA)
   # Value of 1 for where irrigation canals are, but also resistance values of 1
   
   # Crop and Mask to Kern County
@@ -175,11 +179,11 @@ writeRaster(rc_all_2017,"Data/1_DataProcessing/Resistance/Revisions/Baseline/Lan
     st_transform(crs(ras)) %>% 
     mutate(Value=ifelse(MTFCC=="S1100", 1, 0.9)) %>% 
     dplyr::select(Value)
-    #Primary roads at 1, Secondary Roads at 0.9
+    #Primary roads at 1, Secondary Roads at 0.9 [S1100 is primary, S1200 is secondary]
 
   #Rasterize instead of fasterize since they are linestrings
-  roads_ras = rasterize(roads_sf, ras, field="Value", background=0)
-  # Value of 1 for where Roads are, but also resistance values of 1
+  roads_ras = rasterize(roads_sf, ras, field="Value", background=NA)
+  # Value of 1 or 0.9 for where Roads are for resistance
   
   # Crop and Mask to Kern County
   roads_mask= mask(roads_ras, kerncounty)
@@ -191,9 +195,6 @@ writeRaster(rc_all_2017,"Data/1_DataProcessing/Resistance/Revisions/Baseline/Lan
   #Precedence to roads, then irrigation canals, then rivers for values given
     #So that if secondary roads pass over rivers, lower resistance
     
-  #Give 0 values for roads and irrigcanals NA so don't overwrite presence of lower two layers
-  roads_mask[roads_mask<0.1]<-NA #Keep 1 and 0.9 values
-  irrigcanals_mask[irrigcanals_mask<0.1]<-NA #Keep 1 values
   #Precedence
   barriers<-cover(roads_mask, irrigcanals_mask, rivers_mask)
 
@@ -273,15 +274,15 @@ NAvalue(res2017_eq5) <- -9999
 
 # Write output ASCII
 ##############################################
-# writeRaster(res2011_eq1,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2011_eq1.asc",format="ascii",overwrite=T)
-# writeRaster(res2015_eq1,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2015_eq1.asc",format="ascii",overwrite=T)
-# writeRaster(res2017_eq1,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2017_eq1.asc",format="ascii",overwrite=T)
-# 
-# writeRaster(res2011_eq3,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2011_eq3.asc",format="ascii",overwrite=T)
-# writeRaster(res2015_eq3,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2015_eq3.asc",format="ascii",overwrite=T)
-# writeRaster(res2017_eq3,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2017_eq3.asc",format="ascii",overwrite=T)
-# 
-# writeRaster(res2011_eq5,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2011_eq5.asc",format="ascii",overwrite=T)
-# writeRaster(res2015_eq5,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2015_eq5.asc",format="ascii",overwrite=T)
-# writeRaster(res2017_eq5,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2017_eq5.asc",format="ascii",overwrite=T)
-# 
+writeRaster(res2011_eq1,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2011_eq1.asc",format="ascii",overwrite=T)
+writeRaster(res2015_eq1,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2015_eq1.asc",format="ascii",overwrite=T)
+writeRaster(res2017_eq1,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2017_eq1.asc",format="ascii",overwrite=T)
+
+writeRaster(res2011_eq3,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2011_eq3.asc",format="ascii",overwrite=T)
+writeRaster(res2015_eq3,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2015_eq3.asc",format="ascii",overwrite=T)
+writeRaster(res2017_eq3,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2017_eq3.asc",format="ascii",overwrite=T)
+
+writeRaster(res2011_eq5,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2011_eq5.asc",format="ascii",overwrite=T)
+writeRaster(res2015_eq5,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2015_eq5.asc",format="ascii",overwrite=T)
+writeRaster(res2017_eq5,"Data/1_DataProcessing/Resistance/Revisions/Baseline/resistance_2017_eq5.asc",format="ascii",overwrite=T)
+

@@ -1,18 +1,9 @@
 ##Create Kit Fox resistance layers for Kit Fox in Kern County with Negative Exponential Function
 
-#Read in packages
-###############################
-library(tidyverse) #data wrangling
-library(sf) #shapefiles
-library(raster) #rasters
-library(fasterize) #fast rasterize
-library(rgeos)
-library(cleangeo)
-options(scipen = 999) #no scientific notation
 
-
-# Keeley et al. 2017: Habitat suitability is a poor proxy for landscape connectivity during dispersal and mating movements
-  #Negative exponentials--habitat suitability to resistance layers
+# Keeley et al. 2017: Habitat suitability is a poor proxy for landscape connectivity during dispersal and mating movements: https://doi.org/10.1016/j.landurbplan.2017.01.007
+  #Negative exponentials--habitat suitability to resistance layers ["resistance to dispersal is a negative expontential function of habitat suitability within the home range"] 
+    #(Keeley et al. 2017, Keeley et al. 2016, Trainor et al. 2013)
     #"To transform suitability values into resistance values we used eight curves 
     # based on the transformation function (2)to define the relationship between suitability and resistance (Trainor et al., 2013)."
 #Transformation function: 
@@ -21,6 +12,10 @@ options(scipen = 999) #no scientific notation
   # For each ofthe 8 transformations, resistance = 1 when suitability = 1 and resistance = 100 when suitability = 0.
   #At c = 0.25 the relationship# is nearly linear, but as c increases, resistance values become an # increasingly nonlinear negative exponential function of suitability
 
+#Transform Kit Fox habitat suitability values, derived from Cypher et al. 2013, into resistance to movement using negative exponential function and c values of 0.25 (linear comparison), 4, and 8
+  #Negative exponential allows animal to see landscape as more connected during dispersal than while in home range
+  #Dispersal current maps more correletated with suitability current maps in landscapes with larger patches of non-habitat (like ours--intensive not small-scale farming)
+  #Additionally long-distance movements better predicted by habitat suitability transformed to resitance using negative exponential--cites multiple studies
 
 #Read in packages
 ###############################
@@ -74,7 +69,7 @@ lc_2017<-raster("Data/1_DataProcessing/Landuse/Landuse_2017.tif")
 kf_rclmat<-read_csv("Data/1_DataProcessing/Resistance/KitFox/ResistanceValues.csv")%>% 
   dplyr::mutate(Value_Suit=Suitability/100) %>% 
   dplyr::select(Value_Low, Value_High, Value_Suit) %>% 
-  as.matrix()
+  as.matrix() #Use Suitability values instead of inverse resistance (no unclassified areas, just a precaution)
 
 #Reclassify land use as habitat suitability
 rc_2011 <- reclassify(lc_2011, kf_rclmat)#Reclassify land use
@@ -102,7 +97,7 @@ roads_sf<-read_sf("Data/1_DataProcessing/Roads/tl_2019_06_prisecroads/tl_2019_06
   st_transform(crs(ras)) %>% 
   mutate(Value=ifelse(MTFCC=="S1100", 0, 0.1)) %>% 
   dplyr::select(Value)
-#Primary roads at 0, Secondary Roads at 0.1
+#Primary roads at 0 for suitability, Secondary Roads at 0.1 [S1100 is primary, S1200 is secondary]
 
 #Rasterize instead of fasterize since they are linestrings
 roads_ras = rasterize(roads_sf, ras, field="Value", background=NA)

@@ -1,5 +1,7 @@
 ##Create Kit Fox resistance layers for Kit Fox in Kern County on the basis of Naturalness & Human Modification
 
+#Was experimenting with this--but not going with this as too many assumptions had to be made
+
 #Theobold et al. 2010 & 2012: https://conbio-onlinelibrary-wiley-com.ezproxy.library.ubc.ca/doi/10.1111/j.1755-263X.2011.00218.x
 # Steps: 
   #1) Compute "Naturalness" as function of land cover types, housing density, presence of roads, and effects of highway traffic, adjusted minimally by canopy cover and slope
