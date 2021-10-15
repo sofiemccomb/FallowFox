@@ -61,7 +61,7 @@ source("R/1_DataProcessing/Resistance/Baseline.R")
 source("R/1_DataProcessing/Resistance/NegativeExponential.R")
 
 #Naturalness 
-source("R/1_DataProcessing/Resistance/Naturalness.R")
+# source("R/1_DataProcessing/Resistance/Naturalness.R")
 
 ```
 
