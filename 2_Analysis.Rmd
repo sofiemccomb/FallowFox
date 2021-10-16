@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 This script will analyze the results of the Circuitscape and Linkage Mapper Runs. Visualizations of the results will be created in ArcGIS.
-The GIS file where the runs were completed is Data/2_Analysis/Circuitscape/KitFox_RunAnalyses.mxd folder. KitFoxCoreAreas.mxd was used in the creation of Western Kern core areas. KitFox_CompareOutputs.mxd is just a quick check of different analysis outputs. Paper_Maps has the visualizations of results with the mxd used to make the pngs and some of the calculations that were completed to create the maps.
+The GIS file where the runs were completed is Data/2_Analysis/Circuitscape/KitFox_RunAnalyses_Revisions.mxd folder. KitFoxCoreAreas.mxd was used in the creation of Western Kern core areas. KitFox_CompareOutputs.mxd is just a quick check of different analysis outputs. Paper_Maps has the visualizations of results with the mxd used to make the pngs and some of the calculations that were completed to create the maps.
 
 ##Circuitscape
 The ArcGIS Circuitscape toolbox (Circuitscape_for_ArcGIS_2013_10_08_rev2) was used to run the analyses. For Circuitscape, an ASCII file of the Kit Fox core area shapefile data was created using the focal area to raster tool in the Circuitscape toolbox (works better than creating ASCII in R). These are saved in the Data/1_DataProcessing/CoreArea folder for each year (ASCII created using each separate year resistance ASCII layer). Circuitscape was run for each resistance layer with each matching core area ASCII file. Ran pairwise analysis for cumulative current, and other settings standard.
@@ -19,7 +19,7 @@ Toolbox and results from the run saved in folder above the R project, and run on
 
 
 ##Linkage Mapper
-The ArcGIS Linkage Mapper toolbox (Linkage_Mapper_2_0_0) was used to run the linkage mapper analyses. For Linkage Mapper, the resistance rasters and the kit fox core area shapefiles were used. For settings, dropped corridors that intersect core areas and truncated corridors at 200 km.
+The ArcGIS Linkage Mapper toolbox (Linkage_Mapper_2_0_0) was used to run the linkage mapper analyses. For Linkage Mapper, the resistance rasters and the kit fox core area shapefiles were used. For settings, ran cost-weighted distance analyses, dropped corridors that intersect core areas, and truncated corridors at 200 km.
 
 Toolbox and results from the run saved in folder above the R project, and run on local drive where possible, for better processing.
 
@@ -39,165 +39,250 @@ library(ggplot2)
 library(purrr)
 library(estimatr)
 library(reshape2)
+library(broom)
+library(gtools)
+library(dotwhisker)
 # library(coin)
 # library(pwr)
 # library(WRS2)
-# library(broom)
+
 
 options(scipen = 999)
 
 ```
 
+#Create Data Frames from LCPS
+
+Go through all the connectivity analyses output (baseline eq1, b eq3, b eq5, negative exponetial c0.25, ne c4, ne c8) and create csv of dataframes
+
+
+
+```{r og}
+
 #Create csv dataframe from LCP Circuitscape outputs
-
-```{r}
-
-#Read in Least Cost Paths from Circuitscape/Linkage Mapper Runs
-  #Originally run on local drive and moved into main project folder (not R project as very large)
-  #Will need to change destinations to wherever files are stored using files below
-files<-"Z:/FallowFox/ConnectivityTools/Results/Revisions/"
-
-LCP_2011 <- sf::st_read(paste0(files, "KF_2011/output/link_maps.gdb"), layer = "KF_2011_LCPs") %>% 
-  st_set_geometry(NULL)
-LCP_2015 <- sf::st_read(paste0(files, "KF_2015/output/link_maps.gdb"), layer = "KF_2015_LCPs") %>% 
-  st_set_geometry(NULL)
-LCP_2017 <- sf::st_read(paste0(files, "KF_2017/output/link_maps.gdb"), layer = "KF_2017_LCPs") %>% 
-  st_set_geometry(NULL)
-
-#Create and save dataframes for three years
-LCP_2011_csv<-LCP_2011%>% dplyr::mutate(Year=2011) %>% select(Year, everything())
-LCP_2015_csv<-LCP_2015%>% dplyr::mutate(Year=2015)%>% select(Year, everything())
-LCP_2017_csv<-LCP_2017%>% dplyr::mutate(Year=2017)%>% select(Year, everything())
-write_csv(LCP_2011_csv, "Data/2_Analysis/LCP_CSV/LCP_2011_csv.csv")
-write_csv(LCP_2015_csv, "Data/2_Analysis/LCP_CSV/LCP_2015_csv.csv")
-write_csv(LCP_2017_csv, "Data/2_Analysis/LCP_CSV/LCP_2017_csv.csv")
-
-
-```
-
-### Organize into one dataframe
-```{r packages_and_data}
-# rm(list=ls())
-
-
-df_2011 <- read_csv("./Data/2_Analysis/LCP_CSV/LCP_2011_csv.csv")
-df_2015 <- read_csv("./Data/2_Analysis/LCP_CSV/LCP_2015_csv.csv")
-df_2017 <- read_csv("./Data/2_Analysis/LCP_CSV/LCP_2017_csv.csv")
-
-
-df_reg <- rbind(df_2011, df_2015, df_2017)
-
-# Create to_from factor variable column
-df_reg$From_To <- as.factor(paste0(df_reg$From_Core,"_",df_reg$To_Core))
-df_reg$Year <- as.factor(df_reg$Year)
-
-# Convert meters to KM
-df_reg$CW_Dist_km <- df_reg$CW_Dist/1000
-df_reg$LCP_Length_km <- df_reg$LCP_Length/1000
-df_reg$Euc_Dist_km <- df_reg$Euc_Dist/1000
+    #Read in Least Cost Paths from Circuitscape/Linkage Mapper Runs
+      #Originally run on local drive and moved into main project folder (not R project as very large)
+      #Will need to change destinations to wherever files are stored using files below
+    files<-"Z:/FallowFox/ConnectivityTools/Results/Revisions/"
+    
+  #Original aka Old Version
+  #######################################
+    LCP_2011 <- sf::st_read(paste0(files, "KF_2011/output/link_maps.gdb"), layer = "KF_2011_LCPs") %>% st_set_geometry(NULL)
+    LCP_2015 <- sf::st_read(paste0(files, "KF_2015/output/link_maps.gdb"), layer = "KF_2015_LCPs") %>% st_set_geometry(NULL)
+    LCP_2017 <- sf::st_read(paste0(files, "KF_2017/output/link_maps.gdb"), layer = "KF_2017_LCPs") %>% st_set_geometry(NULL)
+    LCP_2011_csv<-LCP_2011%>% dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv<-LCP_2015%>% dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv<-LCP_2017%>% dplyr::mutate(Year=2017)%>% select(Year, everything())
+    write_csv(LCP_2011_csv, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_old.csv")
+    write_csv(LCP_2015_csv, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_old.csv")
+    write_csv(LCP_2017_csv, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_old.csv")
+    
+    
+  #Baseline eq1
+  #######################################
+    LCP_2011_beq1 <- sf::st_read(paste0(files, "KF_2011_base_eq1/output/link_maps.gdb"), layer = "KF_2011_base_eq1_LCPs") %>% st_set_geometry(NULL)
+    LCP_2015_beq1 <- sf::st_read(paste0(files, "KF_2015_base_eq1/output/link_maps.gdb"), layer = "KF_2015_base_eq1_LCPs") %>% st_set_geometry(NULL)
+    LCP_2017_beq1 <- sf::st_read(paste0(files, "KF_2017_base_eq1/output/link_maps.gdb"), layer = "KF_2017_base_eq1_LCPs") %>% st_set_geometry(NULL)
+    LCP_2011_csv_beq1<-LCP_2011_beq1%>% dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv_beq1<-LCP_2015_beq1%>% dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv_beq1<-LCP_2017_beq1%>% dplyr::mutate(Year=2017)%>% select(Year, everything())
+    write_csv(LCP_2011_csv_beq1, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_beq1.csv")
+    write_csv(LCP_2015_csv_beq1, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_beq1.csv")
+    write_csv(LCP_2017_csv_beq1, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_beq1.csv")
+    
 
 ```
 
-###Summarizations
+# Within estimator regression
 
-```{r}
+Loop through dataframes for different resistance layers and create/save within estimator regression summaries
 
-df_reg %>% group_by(Year) %>% summarize(LCP=n(),
-                                        CWDmean=mean(CW_Dist_km),
-                                        CWDsd=sd(CW_Dist_km),
-                                        LCPLengthmean=mean(LCP_Length_km),
-                                       LCPLengthsd=sd(LCP_Length_km),
-                                        CWDLCPmean=mean(cwd_to_Path_Length_Ratio),
-                                        CWDLCPsd=sd(cwd_to_Path_Length_Ratio),
-                                      ERmean=mean(Effective_Resistance),
-                                        ERsd=sd(Effective_Resistance))
-
-
-```
-
-
-### Within estimator regression
+### Loop through Within estimator regression
 ```{r withinReg}
 
-###### LCP Length ######
-# Reference year: 2011
-lcp_length_km_lmrob <- estimatr::lm_robust(formula = LCP_Length_km ~ Year,
-          data = df_reg,
-          clusters = From_To,
-          fixed_effects = ~From_To,
-          se_type = 'stata')
-summary(lcp_length_km_lmrob)
+#Read in and loop through dataframes
+q<-c("old", "beq1")
+dir.create("Data/2_Analysis/df_reg/", showWarnings = FALSE)
 
-# Reference year: 2015
-df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
-lcp_length_km_lmrob15 <- lm_robust(formula = LCP_Length_km ~ Year,
-          data = df_reg,
-          clusters = From_To,
-          fixed_effects = ~From_To,
-          se_type = 'stata')
-summary(lcp_length_km_lmrob15)
+#Loop through different resistance layer connectivity outputs and run regression models and create df of model results
+for (c in q){
+  print(c)
+  dir.create(paste0("Data/2_Analysis/Stats/", c, "/"), showWarnings = FALSE)  
+    #Dataframe
+    ##################################################################
+    
+    # Organize into one dataframe
+    df_2011 <- read_csv(paste0("./Data/2_Analysis/LCP_CSV/LCP_2011_csv_",c ,".csv"))
+    df_2015 <- read_csv(paste0("./Data/2_Analysis/LCP_CSV/LCP_2015_csv_",c ,".csv"))
+    df_2017 <- read_csv(paste0("./Data/2_Analysis/LCP_CSV/LCP_2017_csv_",c ,".csv"))
+    df_reg <- rbind(df_2011, df_2015, df_2017)
+    
+    # Create to_from factor variable column
+    df_reg$From_To <- as.factor(paste0(df_reg$From_Core,"_",df_reg$To_Core))
+    df_reg$Year <- as.factor(df_reg$Year)
+    
+    # Convert meters to KM
+    df_reg$CW_Dist_km <- df_reg$CW_Dist/1000
+    df_reg$LCP_Length_km <- df_reg$LCP_Length/1000
+    df_reg$Euc_Dist_km <- df_reg$Euc_Dist/1000
+    
+    #Save df_reg
+    
+    write_csv(df_reg, paste0("Data/2_Analysis/df_reg/df_reg_", c, ".csv"))
+    
+    # Summarizations
+    df_summary<-df_reg %>% group_by(Year) %>% summarize(LCP=n(), CWDmean=mean(CW_Dist_km), CWDsd=sd(CW_Dist_km),
+                                        LCPLengthmean=mean(LCP_Length_km),LCPLengthsd=sd(LCP_Length_km),
+                                        CWDLCPmean=mean(cwd_to_Path_Length_Ratio),CWDLCPsd=sd(cwd_to_Path_Length_Ratio),
+                                      ERmean=mean(Effective_Resistance), ERsd=sd(Effective_Resistance))
+    df_summary
+    write_csv(df_summary, paste0("./Data/2_Analysis/Stats/",c, "/df_summary.csv"))
+    
+    #Regressions
+    ##################################################################
+    
+    ####### CWD Distance #######
+    # Reference year: 2011
+    df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
+    CWD_lmrob <- lm_robust(formula = CW_Dist_km ~ Year,
+              data = df_reg,
+              clusters = From_To,
+              fixed_effects = ~From_To,
+              se_type = 'stata')
+    # Reference year: 2015
+    df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
+    CWD_lmrob15 <- lm_robust(formula = CW_Dist_km ~ Year,
+              data = df_reg,
+              clusters = From_To,
+              fixed_effects = ~From_To,
+              se_type = 'stata')
+    
+    ###### LCP Length ######
+    # Reference year: 2011
+    df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
+    lcp_length_km_lmrob <- estimatr::lm_robust(formula = LCP_Length_km ~ Year,
+              data = df_reg,
+              clusters = From_To,
+              fixed_effects = ~From_To,
+              se_type = 'stata')
+    # Reference year: 2015
+    df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
+    lcp_length_km_lmrob15 <- lm_robust(formula = LCP_Length_km ~ Year,
+              data = df_reg,
+              clusters = From_To,
+              fixed_effects = ~From_To,
+              se_type = 'stata')
+  
+    
+    ####### CWD to Path Length Distance #######
+    # Reference year: 2011
+    df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
+    CWDtoLCP_lmrob <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
+              data = df_reg,
+              clusters = From_To,
+              fixed_effects = ~From_To,
+              se_type = 'stata')
+    # Reference year: 2015
+    df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
+    CWDtoLCP_lmrob15 <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
+              data = df_reg,
+              clusters = From_To,
+              fixed_effects = ~From_To,
+              se_type = 'stata')
+    
+    
+    ###### Effective Resistance ######
+    # Reference year: 2011
+    df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
+    ER_lmrob <- lm_robust(formula = Effective_Resistance ~ Year,
+              data = df_reg,
+              clusters = From_To,
+              fixed_effects = ~From_To,
+              se_type = 'stata')
+    # Reference year: 2015
+    df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
+    ER_lmrob15 <- lm_robust(formula = Effective_Resistance ~ Year,
+              data = df_reg,
+              clusters = From_To,
+              fixed_effects = ~From_To,
+              se_type = 'stata')
+     
+    
+    #Print summary result
+    sink(paste0("./Data/2_Analysis/Stats/",c, "/lm_summary.txt"))
+    summary(CWD_lmrob)
+    summary(CWD_lmrob15)
+    summary(lcp_length_km_lmrob)
+    summary(lcp_length_km_lmrob15)
+    summary(CWDtoLCP_lmrob)
+    summary(CWDtoLCP_lmrob15)
+    summary(ER_lmrob)
+    summary(ER_lmrob15)
+    sink() # returns output to the console
 
-####### CWD Distance #######
-# Reference year: 2011
-df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
-CWD_lmrob <- lm_robust(formula = CW_Dist_km ~ Year,
-          data = df_reg,
-          clusters = From_To,
-          fixed_effects = ~From_To,
-          se_type = 'stata')
-summary(CWD_lmrob)
-
-# Reference year: 2015
-df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
-CWD_lmrob15 <- lm_robust(formula = CW_Dist_km ~ Year,
-          data = df_reg,
-          clusters = From_To,
-          fixed_effects = ~From_To,
-          se_type = 'stata')
-summary(CWD_lmrob15)
-
-####### CWD to Path Length Distance #######
-# Reference year: 2011
-df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
-CWDtoLCP_lmrob <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
-          data = df_reg,
-          clusters = From_To,
-          fixed_effects = ~From_To,
-          se_type = 'stata')
-summary(CWDtoLCP_lmrob)
-
-# Reference year: 2015
-df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
-CWDtoLCP_lmrob15 <- lm_robust(formula = cwd_to_Path_Length_Ratio ~ Year,
-          data = df_reg,
-          clusters = From_To,
-          fixed_effects = ~From_To,
-          se_type = 'stata')
-summary(CWDtoLCP_lmrob15)
-
-
-###### Effective Resistance ######
-# Reference year: 2011
-df_reg <- within(df_reg, Year <- relevel(Year, ref = '2011'))
-ER_lmrob <- lm_robust(formula = Effective_Resistance ~ Year,
-          data = df_reg,
-          clusters = From_To,
-          fixed_effects = ~From_To,
-          se_type = 'stata')
-
-# Matching coefs and SEs, but no intercept
-summary(ER_lmrob)
-
-# Reference year: 2015
-df_reg <- within(df_reg, Year <- relevel(Year, ref = '2015'))
-ER_lmrob15 <- lm_robust(formula = Effective_Resistance ~ Year,
-          data = df_reg,
-          clusters = From_To,
-          fixed_effects = ~From_To,
-          se_type = 'stata')
-summary(ER_lmrob15)
+    #clean-up and combine lm results into dataframe
+    
+    models <- list(CWD_lmrob = CWD_lmrob, CWD_lmrob15 = CWD_lmrob15,
+                   lcp_length_km_lmrob = lcp_length_km_lmrob, lcp_length_km_lmrob15 = lcp_length_km_lmrob15, 
+                   CWDtoLCP_lmrob = CWDtoLCP_lmrob, CWDtoLCP_lmrob15 = CWDtoLCP_lmrob15,
+                   ER_lmrob = ER_lmrob, ER_lmrob15 = ER_lmrob15)
+    models_df<-purrr::map_df(models, broom::tidy, .id = "model") %>% 
+      dplyr::filter(!term=="Year2011") %>% 
+      dplyr::mutate(term=ifelse(model=="lcp_length_km_lmrob15"|model=="CWD_lmrob15"|
+                                   model=="CWDtoLCP_lmrob15"|model=="ER_lmrob15", "2015-2017",
+                                 ifelse(term=="Year2015", "2011-2015", "2011-2017"))) %>% 
+      dplyr::mutate(Metric=ifelse(outcome=="LCP_Length_km", "LCP (km)", 
+                                  ifelse(outcome=="CW_Dist_km", "CWD (km)",
+                                         ifelse(outcome=="cwd_to_Path_Length_Ratio", "CWD to Path Length Ratio",
+                                                "Effective Resistance (Ohms)")))) %>% 
+      dplyr::mutate(model=c) %>%  #Info on resistance version
+       dplyr::mutate(PvalSig=gtools::stars.pval(p.value))
+    write_csv(models_df, paste0("./Data/2_Analysis/Stats/",c, "/lm_df.csv"))
+    
+   
+} #End For Loop
 
 ```
+
+
+
+#Dot & Whisker Plots of Within-Estimator Results
+
+```{r}
+
+
+models_df2<-models_df %>% dplyr::mutate(model="old2")
+modelsdfs<-rbind(models_df, models_df2)
+modelsdfs$Metric <- factor(modelsdfs$Metric,      # Reordering group factor levels
+                         levels = c("CWD (km)" , "LCP (km)", "CWD to Path Length Ratio", "Effective Resistance (Ohms)"))
+
+#Dot and Whisker Plots
+  modelsdfs %>% dotwhisker::dwplot+
+    theme_bw()+ 
+    xlab("Coefficient Estimate")+
+    geom_vline(xintercept = 0, colour = "grey60", linetype = 2)+
+    scale_y_discrete(limits = c("2011-2015","2011-2017","2015-2017"))+
+    coord_flip()+
+    facet_wrap(~Metric, scales="free")+
+    theme(legend.title=element_blank())+
+   scale_color_brewer(palette="Set2")
+  
+
+
+```
+
+
+
+
+
+
+
+
+
+
+Paired t-test below--come back to this
+Because just going to do one example for SI
+
 
 
 ## New DFs for paired t-tests (Ashley reshapes data and keeps in one table instead)
