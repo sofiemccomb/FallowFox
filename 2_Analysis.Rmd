@@ -63,16 +63,17 @@ Go through all the connectivity analyses output (baseline eq1, b eq3, b eq5, neg
     #Read in Least Cost Paths from Circuitscape/Linkage Mapper Runs
       #Originally run on local drive and moved into main project folder (not R project as very large)
       #Will need to change destinations to wherever files are stored using files below
-    files<-"Z:/FallowFox/ConnectivityTools/Results/Revisions/"
+    
+files<-"Z:/FallowFox/ConnectivityTools/Results/Revisions/"
     
   #Original aka Old Version
   #######################################
-    LCP_2011 <- sf::st_read(paste0(files, "KF_2011/output/link_maps.gdb"), layer = "KF_2011_LCPs") %>% st_set_geometry(NULL)
-    LCP_2015 <- sf::st_read(paste0(files, "KF_2015/output/link_maps.gdb"), layer = "KF_2015_LCPs") %>% st_set_geometry(NULL)
-    LCP_2017 <- sf::st_read(paste0(files, "KF_2017/output/link_maps.gdb"), layer = "KF_2017_LCPs") %>% st_set_geometry(NULL)
-    LCP_2011_csv<-LCP_2011%>% dplyr::mutate(Year=2011) %>% select(Year, everything())
-    LCP_2015_csv<-LCP_2015%>% dplyr::mutate(Year=2015)%>% select(Year, everything())
-    LCP_2017_csv<-LCP_2017%>% dplyr::mutate(Year=2017)%>% select(Year, everything())
+    LCP_2011_csv<-sf::st_read(paste0(files, "KF_2011/output/link_maps.gdb"), layer = "KF_2011_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv<-sf::st_read(paste0(files, "KF_2015/output/link_maps.gdb"), layer = "KF_2015_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv<-sf::st_read(paste0(files, "KF_2017/output/link_maps.gdb"), layer = "KF_2017_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2017)%>% select(Year, everything())
     write_csv(LCP_2011_csv, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_old.csv")
     write_csv(LCP_2015_csv, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_old.csv")
     write_csv(LCP_2017_csv, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_old.csv")
@@ -80,16 +81,76 @@ Go through all the connectivity analyses output (baseline eq1, b eq3, b eq5, neg
     
   #Baseline eq1
   #######################################
-    LCP_2011_beq1 <- sf::st_read(paste0(files, "KF_2011_base_eq1/output/link_maps.gdb"), layer = "KF_2011_base_eq1_LCPs") %>% st_set_geometry(NULL)
-    LCP_2015_beq1 <- sf::st_read(paste0(files, "KF_2015_base_eq1/output/link_maps.gdb"), layer = "KF_2015_base_eq1_LCPs") %>% st_set_geometry(NULL)
-    LCP_2017_beq1 <- sf::st_read(paste0(files, "KF_2017_base_eq1/output/link_maps.gdb"), layer = "KF_2017_base_eq1_LCPs") %>% st_set_geometry(NULL)
-    LCP_2011_csv_beq1<-LCP_2011_beq1%>% dplyr::mutate(Year=2011) %>% select(Year, everything())
-    LCP_2015_csv_beq1<-LCP_2015_beq1%>% dplyr::mutate(Year=2015)%>% select(Year, everything())
-    LCP_2017_csv_beq1<-LCP_2017_beq1%>% dplyr::mutate(Year=2017)%>% select(Year, everything())
+    LCP_2011_csv_beq1<-sf::st_read(paste0(files, "KF_2011_base_eq1/output/link_maps.gdb"), layer = "KF_2011_base_eq1_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv_beq1<-sf::st_read(paste0(files, "KF_2015_base_eq1/output/link_maps.gdb"), layer = "KF_2015_base_eq1_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv_beq1<-sf::st_read(paste0(files, "KF_2017_base_eq1/output/link_maps.gdb"), layer = "KF_2017_base_eq1_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2017)%>% select(Year, everything())
     write_csv(LCP_2011_csv_beq1, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_beq1.csv")
     write_csv(LCP_2015_csv_beq1, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_beq1.csv")
     write_csv(LCP_2017_csv_beq1, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_beq1.csv")
     
+  #Baseline eq3
+  #######################################
+    LCP_2011_csv_beq3<-sf::st_read(paste0(files, "KF_2011_base_eq3/output/link_maps.gdb"), layer = "KF_2011_base_eq3_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv_beq3<-sf::st_read(paste0(files, "KF_2015_base_eq3/output/link_maps.gdb"), layer = "KF_2015_base_eq3_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv_beq3<-sf::st_read(paste0(files, "KF_2017_base_eq3/output/link_maps.gdb"), layer = "KF_2017_base_eq3_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2017)%>% select(Year, everything())
+    write_csv(LCP_2011_csv_beq3, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_beq3.csv")
+    write_csv(LCP_2015_csv_beq3, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_beq3.csv")
+    write_csv(LCP_2017_csv_beq3, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_beq3.csv")
+    
+  #Baseline eq5
+  #######################################
+    LCP_2011_csv_beq5<-sf::st_read(paste0(files, "KF_2011_base_eq5/output/link_maps.gdb"), layer = "KF_2011_base_eq5_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv_beq5<-sf::st_read(paste0(files, "KF_2015_base_eq5/output/link_maps.gdb"), layer = "KF_2015_base_eq5_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv_beq5<-sf::st_read(paste0(files, "KF_2017_base_eq5/output/link_maps.gdb"), layer = "KF_2017_base_eq5_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2017)%>% select(Year, everything())
+    write_csv(LCP_2011_csv_beq5, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_beq5.csv")
+    write_csv(LCP_2015_csv_beq5, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_beq5.csv")
+    write_csv(LCP_2017_csv_beq5, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_beq5.csv")
+  
+
+  #Negative Exponental c0.25
+  #######################################
+    LCP_2011_csv_ne25<-sf::st_read(paste0(files, "KF_2011_ne_25/output/link_maps.gdb"), layer = "KF_2011_ne_25_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv_ne25<-sf::st_read(paste0(files, "KF_2015_ne_25/output/link_maps.gdb"), layer = "KF_2015_ne_25_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv_ne25<-sf::st_read(paste0(files, "KF_2017_ne_25/output/link_maps.gdb"), layer = "KF_2017_ne_25_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2017)%>% select(Year, everything())
+    write_csv(LCP_2011_csv_ne25, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_ne25.csv")
+    write_csv(LCP_2015_csv_ne25, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_ne25.csv")
+    write_csv(LCP_2017_csv_ne25, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_ne25.csv")
+    
+  #Negative Exponental c4
+  #######################################
+    LCP_2011_csv_ne4<-sf::st_read(paste0(files, "KF_2011_ne_4/output/link_maps.gdb"), layer = "KF_2011_ne_4_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv_ne4<-sf::st_read(paste0(files, "KF_2015_ne_4/output/link_maps.gdb"), layer = "KF_2015_ne_4_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv_ne4<-sf::st_read(paste0(files, "KF_2017_ne_4/output/link_maps.gdb"), layer = "KF_2017_ne_4_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2017)%>% select(Year, everything())
+    write_csv(LCP_2011_csv_ne4, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_ne4.csv")
+    write_csv(LCP_2015_csv_ne4, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_ne4.csv")
+    write_csv(LCP_2017_csv_ne4, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_ne4.csv")
+    
+  #Negative Exponental c8
+  #######################################
+    LCP_2011_csv_ne8<-sf::st_read(paste0(files, "KF_2011_ne_8/output/link_maps.gdb"), layer = "KF_2011_ne_8_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2011) %>% select(Year, everything())
+    LCP_2015_csv_ne8<-sf::st_read(paste0(files, "KF_2015_ne_8/output/link_maps.gdb"), layer = "KF_2015_ne_8_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2015)%>% select(Year, everything())
+    LCP_2017_csv_ne8<-sf::st_read(paste0(files, "KF_2017_ne_8/output/link_maps.gdb"), layer = "KF_2017_ne_8_LCPs") %>% st_set_geometry(NULL)%>% 
+      dplyr::mutate(Year=2017)%>% select(Year, everything())
+    write_csv(LCP_2011_csv_ne8, "Data/2_Analysis/LCP_CSV/LCP_2011_csv_ne8.csv")
+    write_csv(LCP_2015_csv_ne8, "Data/2_Analysis/LCP_CSV/LCP_2015_csv_ne8.csv")
+    write_csv(LCP_2017_csv_ne8, "Data/2_Analysis/LCP_CSV/LCP_2017_csv_ne8.csv")
 
 ```
 
@@ -101,7 +162,7 @@ Loop through dataframes for different resistance layers and create/save within e
 ```{r withinReg}
 
 #Read in and loop through dataframes
-q<-c("old", "beq1")
+q<-c("old", "beq1", "beq3", "beq5", "ne25", "ne4", "ne8")
 dir.create("Data/2_Analysis/df_reg/", showWarnings = FALSE)
 
 #Loop through different resistance layer connectivity outputs and run regression models and create df of model results
@@ -250,14 +311,30 @@ for (c in q){
 
 ```{r}
 
+#Read in & rbind all df_reg csvs
+  list_of_files <- list.files(path = "./Data/2_Analysis/Stats",
+                              recursive = TRUE,
+                              pattern = "\\lm_df.csv$",
+                              full.names = TRUE)
+  modelsdfs <- list_of_files %>%
+      set_names() %>% 
+      map_df(read_csv)  
 
-models_df2<-models_df %>% dplyr::mutate(model="old2")
-modelsdfs<-rbind(models_df, models_df2)
-modelsdfs$Metric <- factor(modelsdfs$Metric,      # Reordering group factor levels
+#Rename models
+  modelnames<-data.frame(model=c("old", "beq1", "beq3", "beq5", "ne25", "ne4", "ne8"), 
+                       modelnames=c("Original","Linear Eq1", "Linear Eq3", "Linear Eq5", "Negative Exponential 0.25", "Negative Exponential 4", "Negative Exponential 8"))
+  modelsdfs<-modelsdfs %>% merge(modelnames, by="model")%>% dplyr::select(-model) %>% dplyr::rename(model=modelnames) %>% select(model, everything())
+
+#Reorder groups
+  modelsdfs$Metric <- factor(modelsdfs$Metric,      # Reordering group factor levels
                          levels = c("CWD (km)" , "LCP (km)", "CWD to Path Length Ratio", "Effective Resistance (Ohms)"))
 
+  
+#Save csv for plots
+  write_csv(modelsdfs, paste0("./Data/2_Analysis/Stats/lm_df_all.csv"))
+
 #Dot and Whisker Plots
-  modelsdfs %>% dotwhisker::dwplot+
+  modelsdfs %>% dotwhisker::dwplot()+
     theme_bw()+ 
     xlab("Coefficient Estimate")+
     geom_vline(xintercept = 0, colour = "grey60", linetype = 2)+
@@ -265,8 +342,10 @@ modelsdfs$Metric <- factor(modelsdfs$Metric,      # Reordering group factor leve
     coord_flip()+
     facet_wrap(~Metric, scales="free")+
     theme(legend.title=element_blank())+
-   scale_color_brewer(palette="Set2")
-  
+    scale_color_brewer(palette="Set2") 
+
+ #Save plot 
+  ggsave("./Data/2_Analysis/Stats/ModelComparison.jpg")
 
 
 ```
