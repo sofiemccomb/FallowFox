@@ -30,7 +30,7 @@ For Pinchpoint Mapper, ran on linkage mapper output with same core areas shapefi
 
 
 ##Read Packages
-```{r}
+```{r packages}
 
 library(sf)
 library(raster)
@@ -55,8 +55,7 @@ options(scipen = 999)
 
 Go through all the connectivity analyses output (baseline eq1, b eq3, b eq5, negative exponetial c0.25, ne c4, ne c8) and create csv of dataframes
 
-
-
+##### Does OG mean original here?
 ```{r og}
 
 #Create csv dataframe from LCP Circuitscape outputs
@@ -192,11 +191,15 @@ for (c in q){
     write_csv(df_reg, paste0("Data/2_Analysis/df_reg/df_reg_", c, ".csv"))
     
     # Summarizations
-    df_summary<-df_reg %>% group_by(Year) %>% summarize(LCP=n(), CWDmean=mean(CW_Dist_km), CWDsd=sd(CW_Dist_km),
-                                        LCPLengthmean=mean(LCP_Length_km),LCPLengthsd=sd(LCP_Length_km),
-                                        CWDLCPmean=mean(cwd_to_Path_Length_Ratio),CWDLCPsd=sd(cwd_to_Path_Length_Ratio),
-                                      ERmean=mean(Effective_Resistance), ERsd=sd(Effective_Resistance))
-    df_summary
+    df_summary<-df_reg %>% 
+      group_by(Year) %>% 
+      summarize(LCP=n(), 
+                CWDmean=mean(CW_Dist_km), CWDsd=sd(CW_Dist_km),
+                LCPLengthmean=mean(LCP_Length_km),LCPLengthsd=sd(LCP_Length_km),
+                CWDLCPmean=mean(cwd_to_Path_Length_Ratio),CWDLCPsd=sd(cwd_to_Path_Length_Ratio),
+                ERmean=mean(Effective_Resistance), ERsd=sd(Effective_Resistance))
+    
+    head(df_summary)
     write_csv(df_summary, paste0("./Data/2_Analysis/Stats/",c, "/df_summary.csv"))
     
     #Regressions
@@ -309,7 +312,7 @@ for (c in q){
 
 #Dot & Whisker Plots of Within-Estimator Results
 
-```{r}
+```{r dataViz}
 
 #Read in & rbind all df_reg csvs
   list_of_files <- list.files(path = "./Data/2_Analysis/Stats",
@@ -329,10 +332,11 @@ for (c in q){
   modelsdfs$Metric <- factor(modelsdfs$Metric,      # Reordering group factor levels
                          levels = c("CWD (km)" , "LCP (km)", "CWD to Path Length Ratio", "Effective Resistance (Ohms)"))
 
-  
 #Save csv for plots
   write_csv(modelsdfs, paste0("./Data/2_Analysis/Stats/lm_df_all.csv"))
 
+modelsdfs <- read_csv("./Data/2_Analysis/Stats/lm_df_all.csv")
+  
 #Dot and Whisker Plots
   modelsdfs %>% dotwhisker::dwplot()+
     theme_bw()+ 
@@ -342,7 +346,8 @@ for (c in q){
     coord_flip()+
     facet_wrap(~Metric, scales="free")+
     theme(legend.title=element_blank())+
-    scale_color_brewer(palette="Set2") 
+    scale_color_brewer(palette="Set2")
+    
 
  #Save plot 
   ggsave("./Data/2_Analysis/Stats/ModelComparison.jpg")
